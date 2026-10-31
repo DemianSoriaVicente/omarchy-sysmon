@@ -6,6 +6,9 @@
 set -uo pipefail
 
 emit() { printf '%s=%s\n' "$1" "$2"; }
+# rd FILE: read the first line into $REPLY without forking (empty on failure)
+rd() { REPLY=""; [ -r "$1" ] && read -r REPLY < "$1" 2>/dev/null || REPLY=""; }
+instance="${1:-default}"
 
 # ---------- CPU model ----------
 cpu_model=$(awk -F: '/^model name/ { gsub(/^[ \t]+/, "", $2); print $2; exit }' /proc/cpuinfo 2>/dev/null)
@@ -14,13 +17,14 @@ cpu_model=$(awk -F: '/^model name/ { gsub(/^[ \t]+/, "", $2); print $2; exit }' 
 cpu_temp=""
 for hw in /sys/class/hwmon/hwmon*; do
   [ -r "$hw/name" ] || continue
-  case "$(cat "$hw/name" 2>/dev/null)" in
+  rd "$hw/name"
+  case "$REPLY" in
     k10temp|coretemp|zenpower) ;;
     *) continue ;;
   esac
   for f in "$hw"/temp*_input; do
     [ -r "$f" ] || continue
-    raw=$(cat "$f" 2>/dev/null) || continue
+    rd "$f"; raw=$REPLY
     [ -n "$raw" ] || continue
     c=$((raw / 1000))
     if [ -z "$cpu_temp" ] || [ "$c" -gt "$cpu_temp" ]; then cpu_temp=$c; fi
@@ -31,43 +35,53 @@ done
 nvme_temp=""
 for hw in /sys/class/hwmon/hwmon*; do
   [ -r "$hw/name" ] || continue
-  [ "$(cat "$hw/name" 2>/dev/null)" = "nvme" ] || continue
+  rd "$hw/name"; [ "$REPLY" = "nvme" ] || continue
   [ -r "$hw/temp1_input" ] || continue
-  raw=$(cat "$hw/temp1_input" 2>/dev/null) || continue
+  rd "$hw/temp1_input"; raw=$REPLY
   [ -n "$raw" ] || continue
   c=$((raw / 1000))
   if [ -z "$nvme_temp" ] || [ "$c" -gt "$nvme_temp" ]; then nvme_temp=$c; fi
 done
 
 # ---------- Fan speeds (needs a super-I/O driver such as nct6683/nct6775/nct6687d) ----------
-# Uses fanN_label when the driver provides one; MSI boards often leave labels
-# empty, so fall back to the usual header order: fan1 CPU, fan2 pump, fan3+ case.
-# Every spinning fan is exported in `fans` as "name=rpm;" pairs; fan_cpu and
-# fan_sys remain for backwards compatibility.
+# Uses fanN_label when the driver provides one. Otherwise, for super-I/O chips
+# (MSI boards often leave labels empty) fall back to the usual header order:
+# fan1 CPU, fan2 pump, fan3+ case. Fans on any other chip (e.g. amdgpu) are
+# named "<chip> fan N" so they never collide with the motherboard ones.
+# Every fan is exported in `fans` as "name=rpm;" pairs, INCLUDING stopped or
+# unplugged ones (rpm 0); the UI hides the zeros but can tell "no sensors"
+# from "all fans stopped".
+# fan_cpu and fan_sys remain for backwards compatibility.
 fan_cpu=""
 fan_sys=""
 fans=""
 for f in $(ls -v /sys/class/hwmon/hwmon*/fan[0-9]*_input 2>/dev/null); do
   [ -r "$f" ] || continue
-  rpm=$(cat "$f" 2>/dev/null) || continue
+  rd "$f"; rpm=$REPLY
   case "$rpm" in ''|*[!0-9]*) continue ;; esac
   idx=${f##*/fan}; idx=${idx%_input}
-  label=$(cat "${f%_input}_label" 2>/dev/null)
+  hw=${f%/*}
+  rd "$hw/name"; chip=$REPLY
+  rd "${f%_input}_label"; label=$REPLY
+  superio=0
+  case "$chip" in nct*|it8*|f71*|w83*|sch*) superio=1 ;; esac
   if [ -z "$label" ]; then
-    case "$idx" in
-      1) label="CPU fan" ;;
-      2) label="Pump" ;;
-      *) label="Case fan $((idx - 2))" ;;
-    esac
+    if [ "$superio" = 1 ]; then
+      case "$idx" in
+        1) label="CPU fan" ;;
+        2) label="Pump" ;;
+        *) label="Case fan $((idx - 2))" ;;
+      esac
+    else
+      label="${chip:-hwmon} fan $idx"
+    fi
   fi
-  if [ "$idx" = 1 ]; then
-    fan_cpu=$rpm
-    [ "$rpm" -gt 0 ] && fans="${fans}${label}=${rpm};"
-  elif [ "$idx" = 2 ]; then
-    [ "$rpm" -gt 0 ] && fans="${fans}${label}=${rpm};"
-  else
-    if [ "$rpm" -gt 0 ]; then
-      fans="${fans}${label}=${rpm};"
+  label=${label//[;=]/ }
+  fans="${fans}${label}=${rpm};"
+  if [ "$superio" = 1 ]; then
+    if [ "$idx" = 1 ]; then
+      fan_cpu=$rpm
+    elif [ "$idx" -gt 2 ] && [ "$rpm" -gt 0 ]; then
       if [ -z "$fan_sys" ] || [ "$rpm" -gt "$fan_sys" ]; then fan_sys=$rpm; fi
     fi
   fi
@@ -78,7 +92,7 @@ freq_sum=0
 freq_n=0
 for f in /sys/devices/system/cpu/cpu[0-9]*/cpufreq/scaling_cur_freq; do
   [ -r "$f" ] || continue
-  v=$(cat "$f" 2>/dev/null) || continue
+  rd "$f"; v=$REPLY
   [ -n "$v" ] || continue
   freq_sum=$((freq_sum + v))
   freq_n=$((freq_n + 1))
@@ -89,13 +103,13 @@ cpu_freq=""
 cpu_max_freq=""
 for f in /sys/devices/system/cpu/cpu0/cpufreq/cpuinfo_max_freq; do
   [ -r "$f" ] || continue
-  v=$(cat "$f" 2>/dev/null) || continue
+  rd "$f"; v=$REPLY
   [ -n "$v" ] && cpu_max_freq=$((v / 1000))
 done
 
 # ---------- CPU usage since the previous call (state kept in XDG_RUNTIME_DIR) ----------
 state_dir="${XDG_RUNTIME_DIR:-/tmp}"
-state_file="$state_dir/demi-sysmon.stat"
+state_file="$state_dir/demi-sysmon-${instance//[^A-Za-z0-9_-]/_}.stat"
 cpu_usage=""
 # First run after login: take a baseline and wait briefly so the very first
 # reading is a real percentage instead of an empty "--" for one cycle.
