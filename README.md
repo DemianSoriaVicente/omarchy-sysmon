@@ -10,6 +10,8 @@ every fan the motherboard exposes.
 󰻠 57°  󰢮 48°
 ```
 
+![System monitor popup](screenshot-popup.png)
+
 ## Features
 
 - **Bar** — CPU temperature and GPU temperature side by side, colored by temperature

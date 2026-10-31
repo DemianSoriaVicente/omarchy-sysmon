@@ -55,8 +55,8 @@ BarWidget {
   function fmtPercent(value) { return value >= 0 ? Math.round(value) + "%" : "--"; }
   function fmtClockMHz(value) { var n = parseFloat(value); return isFinite(n) && n > 0 ? Math.round(n) + " MHz" : "--"; }
   function fmtGHz(value) { var n = parseFloat(value); return isFinite(n) && n > 0 ? (n / 1000).toFixed(1) + " GHz" : "--"; }
-  function fmtGB(value) { var n = parseFloat(value); return isFinite(n) && n > 0 ? (n / 1024).toFixed(1) + " GB" : "--"; }
-  function fmtMiB(value) { var n = parseFloat(value); return isFinite(n) && n > 0 ? Math.round(n) + " MiB" : "--"; }
+  function fmtGB(value) { var n = parseFloat(value); return isFinite(n) && n >= 0 ? (n / 1024).toFixed(1) + " GB" : "--"; }
+  function fmtMiB(value) { var n = parseFloat(value); return isFinite(n) && n >= 0 ? Math.round(n) + " MiB" : "--"; }
   function fmtWatts(value) { var n = parseFloat(value); return isFinite(n) && n > 0 ? Math.round(n) + " W" : "--"; }
   function fmtRpm(value) { var n = parseFloat(value); return isFinite(n) && n > 0 ? Math.round(n) + " rpm" : "--"; }
   function fmtUptime(value) { var n = parseFloat(value); if (!isFinite(n) || n <= 0) return "--"; var days = Math.floor(n / 86400); var hours = Math.floor((n % 86400) / 3600); var minutes = Math.floor((n % 3600) / 60); if (days > 0) return days + "d " + hours + "h"; if (hours > 0) return hours + "h " + minutes + "m"; return minutes + "m"; }
