@@ -1,34 +1,39 @@
 # omarchy-sysmon
 
-A system monitor bar widget for [Omarchy](https://omarchy.org): CPU and GPU temperature
-right in the bar, and a popup with everything else — usage, clocks, memory, storage and
-every fan the motherboard exposes.
+A system monitor bar widget for [Omarchy](https://omarchy.org): CPU temperature, GPU
+temperature and live RAM usage right in the bar. Each one is its own click zone with its
+own popup — usage, clocks, memory, storage and every fan the motherboard exposes.
 
 ![omarchy-sysmon widget in the bar](screenshot.png)
 
 ```
-󰻠 57°  󰢮 48°
+󰻠 54°  󰢮 51°  29%
 ```
 
-![System monitor popup](screenshot-popup.png)
+| CPU zone | GPU zone | RAM zone |
+| :---: | :---: | :---: |
+| ![Processor popup](screenshot-cpu.png) | ![Graphics popup](screenshot-gpu.png) | ![System popup](screenshot-system.png) |
 
 ## Features
 
-- **Bar** — CPU temperature and GPU temperature side by side, colored by temperature
-  (normal, accent from 75 °C, urgent from 85 °C).
-- **Popup** (left click) — a compact, aligned panel with:
-  - **Processor** — model, thread count, temperature, usage with a meter, current/max
-    frequency and load average.
-  - **Graphics** — name and driver, temperature, core usage and memory controller usage,
-    VRAM, core and memory clocks, power draw and P-state when the driver reports them.
-  - **Memory** — RAM used / total with a meter, plus swap when present.
-  - **Storage & cooling** — NVMe temperature, GPU fan and every motherboard fan with its
-    RPM (not just one aggregated value).
-- **Right click** opens `btop`.
-- **Hover** shows a one-line tooltip with CPU and GPU details.
-- **Vertical bars** are supported: temperatures stack instead of sitting in a row.
-- **Degrades gracefully** — without an NVIDIA GPU the graphics section disappears, and
-  without `nvidia-smi` no process is spawned at all.
+- **Bar** — three independent zones:
+  - **󰻠 CPU temperature** — colored by temperature (normal, accent from 75 °C, urgent
+    from 85 °C).
+  - **󰢮 GPU temperature** — same coloring; only shown when an NVIDIA GPU is present.
+  - **RAM usage %** — updates live (accent from 80 %, urgent from 90 %).
+- **Popup per zone** (left click) — clicking a zone shows only what belongs to it:
+  - **CPU** — model, thread count, temperature, usage with a meter, current/max
+    frequency, load average and the CPU fan.
+  - **GPU** — name and driver, temperature, core and memory-controller usage, VRAM with
+    a meter, core and memory clocks, power draw, P-state and GPU fan.
+  - **RAM (system overview)** — CPU/GPU summary, RAM used / total with a meter, swap,
+    NVMe temperature and every motherboard fan with its RPM, plus uptime.
+  - Clicking the open zone again closes the popup; clicking another zone switches to it.
+- **Right click** on any zone opens `btop`.
+- **Hover** shows a one-line tooltip specific to that zone.
+- **Vertical bars** are supported: the three zones stack instead of sitting in a row.
+- **Degrades gracefully** — without an NVIDIA GPU the GPU zone disappears, and without
+  `nvidia-smi` no process is spawned at all.
 
 ## Requirements
 
@@ -111,8 +116,9 @@ Measured on a Ryzen 5 5600X + RTX 4060: `collect.sh` takes ~90 ms of wall time e
 
 ## Español
 
-Widget de monitor de sistema para la barra de Omarchy: temperaturas de CPU y GPU en la
-barra y un popup con uso, frecuencias, memoria, NVMe y **todos** los ventiladores.
+Widget de monitor de sistema para la barra de Omarchy: temperatura de CPU, temperatura
+de GPU y uso de RAM en tiempo real, cada uno como zona de clic con su propio popup (uso,
+frecuencias, memoria, NVMe y **todos** los ventiladores).
 
 **Instalación**
 
@@ -124,9 +130,10 @@ omarchy restart shell
 
 **Uso**
 
-- Clic izquierdo: abre el panel de detalle.
+- Clic izquierdo en la CPU, la GPU o el % de RAM: abre el panel de esa zona (pulsar de
+  nuevo la zona abierta lo cierra).
 - Clic derecho: abre `btop`.
-- Pasar el ratón: tooltip con CPU y GPU.
+- Pasar el ratón: tooltip de la zona.
 
 **Requisitos**: Omarchy 4.x. Para la GPU hace falta el driver de NVIDIA con `nvidia-smi`.
 Para los ventiladores, un driver de sensores como `nct6687`/`nct6775`.
