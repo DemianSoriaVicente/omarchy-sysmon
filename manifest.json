@@ -1,0 +1,21 @@
+{
+  "schemaVersion": 1,
+  "id": "demi.sysmon",
+  "name": "System monitor",
+  "version": "1.0.0",
+  "author": "Demian Soria Vicente",
+  "description": "CPU and GPU temperatures in the bar, with a popup showing usage, clocks, memory, fans and load",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "Sysmon.qml"
+  },
+  "barWidget": {
+    "displayName": "System monitor",
+    "description": "CPU/GPU temperatures, usage, clocks, fans and memory",
+    "category": "System",
+    "allowMultiple": false,
+    "defaultSection": "left"
+  }
+}
