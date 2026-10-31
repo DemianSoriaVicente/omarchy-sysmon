@@ -356,7 +356,7 @@ BarWidget {
   readonly property string popupTitle: popupSection === "cpu" ? "Processor" : (popupSection === "gpu" ? "Graphics" : "System monitor")
   readonly property string popupIcon: popupSection === "cpu" ? "󰻠" : (popupSection === "gpu" ? "󰢮" : "󰓅")
   readonly property string popupSubtitle: {
-    if (popupSection === "cpu") return (root.cpuString("cpu_model") || "CPU") + (root.cpuNumber("cpu_cores") > 0 ? "  ·  " + root.cpuNumber("cpu_cores") + " threads" : "")
+    if (popupSection === "cpu") return (root.cpuString("cpu_model").replace(/\s+\d+-Core Processor$/, "") || "CPU") + (root.cpuNumber("cpu_cores") > 0 ? "  ·  " + root.cpuNumber("cpu_cores") + " threads" : "")
     if (popupSection === "gpu") return root.gpuString("name") + (root.gpuString("driver") !== "" ? "  ·  Driver " + root.gpuString("driver") : "")
     return "up " + root.fmtUptime(root.cpuNumber("uptime"))
   }
